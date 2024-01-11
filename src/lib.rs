@@ -97,6 +97,25 @@ impl<F: FieldExt> ExponentiationChip<F> {
             },
         );
 
+        meta.create_gate(
+            "n_binary check",
+            |meta| {
+                // col_y  | col_x | col_n  | col_n_acc  | const_2_power_col           |selector | instance
+                //        |       | n_prev | n_acc_prev | 2 ^ i == const_2_power_prev |         | n as u64
+                //        |       |        | n_acc_cur
+                let s = meta.query_selector(selector);
+
+                let n_prev = meta.query_advice(col_n, Rotation::prev());
+                let const_2_power_prev = meta.query_fixed(const_2_power_col, Rotation::prev());
+
+                let n_acc_prev = meta.query_advice(col_n_acc, Rotation::prev());
+                let n_acc_cur = meta.query_advice(col_n_acc, Rotation::cur());
+                vec![
+                    s * (n_acc_cur.clone() - (n_acc_prev.clone() + n_prev.clone() * const_2_power_prev))
+                ]
+            },
+        );
+
         ExponentiationConfig {
             col_y,
             col_x,
@@ -158,7 +177,6 @@ impl<F: FieldExt> ExponentiationChip<F> {
                 }
 
                 let mut const_2_power_vec = Vec::with_capacity(len);
-
 
                 // calculate intermediate values of y up to the final value
                 for i in 1..len {
