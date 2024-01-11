@@ -24,6 +24,7 @@ struct ExponentiationConfig {
     // base
     // result
     // bitwise representation of n in reverse order
+    // n value itself
     pub instance: Column<Instance>,
 }
 
