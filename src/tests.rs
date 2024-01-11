@@ -106,3 +106,54 @@ fn exp_example2_fail() {
     let prover = MockProver::run(k, &circuit, vec![public_input.clone()]).unwrap();
     prover.assert_satisfied();
 }
+
+#[test]
+fn exp_example3() {
+    let k = 5;
+
+    const N: usize = 8;
+
+    let x = Fp::from(5);
+    let result = Fp::from(125);
+    let n = 3;
+
+    let mut n_bits: Vec<_> = u64_to_bits_rev(n, N);
+
+    let circuit = MyCircuit::<Fp, 8>(PhantomData);
+
+    let mut public_input = vec![
+        x,
+        result,
+    ];
+
+    public_input.append(&mut n_bits);
+
+    let prover = MockProver::run(k, &circuit, vec![public_input.clone()]).unwrap();
+    prover.assert_satisfied();
+}
+
+#[test]
+#[should_panic]
+fn exp_example3_fail() {
+    let k = 5;
+
+    const N: usize = 8;
+
+    let x = Fp::from(5);
+    let result = Fp::from(99);
+    let n = 3;
+
+    let mut n_bits: Vec<_> = u64_to_bits_rev(n, N);
+
+    let circuit = MyCircuit::<Fp, 8>(PhantomData);
+
+    let mut public_input = vec![
+        x,
+        result,
+    ];
+
+    public_input.append(&mut n_bits);
+
+    let prover = MockProver::run(k, &circuit, vec![public_input.clone()]).unwrap();
+    prover.assert_satisfied();
+}
