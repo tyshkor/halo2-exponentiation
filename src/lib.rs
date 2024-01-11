@@ -17,7 +17,7 @@ struct ExponentiationConfig {
     // selector for the only gate
     pub selector: Selector,
     // instance
-    // base 
+    // base
     // result
     // bitwise representation of n in reverse order
     pub instance: Column<Instance>,
@@ -53,19 +53,25 @@ impl<F: FieldExt> ExponentiationChip<F> {
 
         meta.enable_constant(const_col);
 
-        meta.create_gate("if n_prev == 1 {y_cur * x_prev} else {y_curcargo test}", |meta| {
-            // col_y  | col_x  | col_n  |selector
-            // y_prev | x_prev | n_prev |   s
-            // y_cur  |
-            let s = meta.query_selector(selector);
+        meta.create_gate(
+            "if n_prev == 1 {y_cur * x_prev} else {y_curcargo test}",
+            |meta| {
+                // col_y  | col_x  | col_n  |selector
+                // y_prev | x_prev | n_prev |   s
+                // y_cur  |
+                let s = meta.query_selector(selector);
 
-            let y_prev = meta.query_advice(col_y, Rotation::prev());
-            let y_cur = meta.query_advice(col_y, Rotation::cur());
+                let y_prev = meta.query_advice(col_y, Rotation::prev());
+                let y_cur = meta.query_advice(col_y, Rotation::cur());
 
-            let x_prev = meta.query_advice(col_x, Rotation::prev());
-            let n_prev = meta.query_advice(col_n, Rotation::prev());
-            vec![s * (n_prev.clone() * (y_cur.clone() - y_prev.clone() * x_prev) + (Expression::Constant(F::one()) - n_prev) * (y_cur - y_prev))]
-        });
+                let x_prev = meta.query_advice(col_x, Rotation::prev());
+                let n_prev = meta.query_advice(col_n, Rotation::prev());
+                vec![
+                    s * (n_prev.clone() * (y_cur.clone() - y_prev.clone() * x_prev)
+                        + (Expression::Constant(F::one()) - n_prev) * (y_cur - y_prev)),
+                ]
+            },
+        );
 
         ExponentiationConfig {
             col_y,
@@ -81,12 +87,7 @@ impl<F: FieldExt> ExponentiationChip<F> {
         &self,
         mut layouter: impl Layouter<F>,
         len: usize,
-    ) -> Result<
-        
-            AssignedCell<F, F>
-        ,
-        Error,
-    > {
+    ) -> Result<AssignedCell<F, F>, Error> {
         layouter.assign_region(
             || "table",
             |mut region| {
@@ -130,7 +131,7 @@ impl<F: FieldExt> ExponentiationChip<F> {
                     n_binary_vec.push(cell.clone());
                 }
 
-                // calculate intermediate values of y up to the final value 
+                // calculate intermediate values of y up to the final value
                 for i in 1..len {
                     let one_minus_n = n_binary_vec[i - 1].value().map(|n| {
                         let n_val = n.get_lower_32() as u64;
@@ -141,16 +142,16 @@ impl<F: FieldExt> ExponentiationChip<F> {
                         || "y",
                         self.config.col_y,
                         i,
-                        || n_binary_vec[i - 1].value().copied()
+                        || {
+                            n_binary_vec[i - 1].value().copied()
                                 * (y_cell.value().copied() * x_power_vec[i - 1].value())
-                                + one_minus_n * y_cell.value().copied(),
+                                + one_minus_n * y_cell.value().copied()
+                        },
                     )?;
 
-                    
                     if i < len - 1 {
                         self.config.selector.enable(&mut region, i)?;
                     }
-
                 }
 
                 // return final value

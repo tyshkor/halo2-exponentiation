@@ -19,10 +19,7 @@ fn exp_example1() {
 
     let circuit = MyCircuit::<Fp, 8>(PhantomData);
 
-    let mut public_input = vec![
-        x,
-        result,
-    ];
+    let mut public_input = vec![x, result];
 
     public_input.append(&mut n_bits);
 
@@ -45,10 +42,7 @@ fn exp_example1_fail() {
 
     let circuit = MyCircuit::<Fp, 8>(PhantomData);
 
-    let mut public_input = vec![
-        x,
-        result,
-    ];
+    let mut public_input = vec![x, result];
 
     public_input.append(&mut n_bits);
 
@@ -70,10 +64,7 @@ fn exp_example2() {
 
     let circuit = MyCircuit::<Fp, 8>(PhantomData);
 
-    let mut public_input = vec![
-        x,
-        result,
-    ];
+    let mut public_input = vec![x, result];
 
     public_input.append(&mut n_bits);
 
@@ -96,10 +87,7 @@ fn exp_example2_fail() {
 
     let circuit = MyCircuit::<Fp, 8>(PhantomData);
 
-    let mut public_input = vec![
-        x,
-        result,
-    ];
+    let mut public_input = vec![x, result];
 
     public_input.append(&mut n_bits);
 
@@ -121,10 +109,7 @@ fn exp_example3() {
 
     let circuit = MyCircuit::<Fp, 8>(PhantomData);
 
-    let mut public_input = vec![
-        x,
-        result,
-    ];
+    let mut public_input = vec![x, result];
 
     public_input.append(&mut n_bits);
 
@@ -147,10 +132,7 @@ fn exp_example3_fail() {
 
     let circuit = MyCircuit::<Fp, 8>(PhantomData);
 
-    let mut public_input = vec![
-        x,
-        result,
-    ];
+    let mut public_input = vec![x, result];
 
     public_input.append(&mut n_bits);
 
@@ -172,10 +154,7 @@ fn exp_example4() {
 
     let circuit = MyCircuit::<Fp, 8>(PhantomData);
 
-    let mut public_input = vec![
-        x,
-        result,
-    ];
+    let mut public_input = vec![x, result];
 
     public_input.append(&mut n_bits);
 
@@ -198,10 +177,7 @@ fn exp_example4_fail() {
 
     let circuit = MyCircuit::<Fp, 8>(PhantomData);
 
-    let mut public_input = vec![
-        x,
-        result,
-    ];
+    let mut public_input = vec![x, result];
 
     public_input.append(&mut n_bits);
 
@@ -223,10 +199,7 @@ fn exp_example5() {
 
     let circuit = MyCircuit::<Fp, 8>(PhantomData);
 
-    let mut public_input = vec![
-        x,
-        result,
-    ];
+    let mut public_input = vec![x, result];
 
     public_input.append(&mut n_bits);
 
@@ -249,10 +222,7 @@ fn exp_example5_fail() {
 
     let circuit = MyCircuit::<Fp, 8>(PhantomData);
 
-    let mut public_input = vec![
-        x,
-        result,
-    ];
+    let mut public_input = vec![x, result];
 
     public_input.append(&mut n_bits);
 
