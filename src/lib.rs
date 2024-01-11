@@ -14,3 +14,9 @@ struct ExponentiationConfig {
     pub selector: Selector,
     pub instance: Column<Instance>,
 }
+
+#[derive(Debug, Clone)]
+struct ExponentiationChip<F: FieldExt> {
+    config: ExponentiationConfig,
+    _marker: PhantomData<F>,
+}
