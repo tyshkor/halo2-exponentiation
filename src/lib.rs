@@ -154,3 +154,33 @@ impl<F: FieldExt> ExponentiationChip<F> {
         layouter.constrain_instance(cell.cell(), self.config.instance, row)
     }
 }
+
+#[derive(Default)]
+struct MyCircuit<F, const N: usize>(PhantomData<F>);
+
+impl<F: FieldExt, const N: usize> Circuit<F> for MyCircuit<F, N> {
+    type Config = ExponentiationConfig;
+    type FloorPlanner = SimpleFloorPlanner;
+
+    fn without_witnesses(&self) -> Self {
+        Self::default()
+    }
+
+    fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+        ExponentiationChip::configure(meta)
+    }
+
+    fn synthesize(
+        &self,
+        config: Self::Config,
+        mut layouter: impl Layouter<F>,
+    ) -> Result<(), Error> {
+        let chip = ExponentiationChip::construct(config);
+
+        let cell_y = chip.assign(layouter.namespace(|| "first row"), N)?;
+
+        chip.expose_public(layouter.namespace(|| "out"), &cell_y, 1)?;
+
+        Ok(())
+    }
+}
