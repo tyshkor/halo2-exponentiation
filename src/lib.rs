@@ -81,40 +81,33 @@ impl<F: FieldExt> ExponentiationChip<F> {
             },
         );
 
-        meta.create_gate(
-            "squaring",
-            |meta| {
-                // col_y  | col_x      | col_n  | col_n_acc | const_2_power_col |selector
-                //        | x_prev     |        |           |                   |s
-                //        | x_prev ^ 2 |
-                let s = meta.query_selector(selector);
+        meta.create_gate("squaring", |meta| {
+            // col_y  | col_x      | col_n  | col_n_acc | const_2_power_col |selector
+            //        | x_prev     |        |           |                   |s
+            //        | x_prev ^ 2 |
+            let s = meta.query_selector(selector);
 
-                let x_prev = meta.query_advice(col_x, Rotation::prev());
-                let x_cur = meta.query_advice(col_x, Rotation::cur());
-                vec![
-                    s * (x_cur.clone() - x_prev.clone() * x_prev)
-                ]
-            },
-        );
+            let x_prev = meta.query_advice(col_x, Rotation::prev());
+            let x_cur = meta.query_advice(col_x, Rotation::cur());
+            vec![s * (x_cur.clone() - x_prev.clone() * x_prev)]
+        });
 
-        meta.create_gate(
-            "n_binary check",
-            |meta| {
-                // col_y  | col_x | col_n  | col_n_acc  | const_2_power_col           |selector | instance
-                //        |       | n_prev | n_acc_prev | 2 ^ i == const_2_power_prev |         | n as u64
-                //        |       |        | n_acc_cur
-                let s = meta.query_selector(selector);
+        meta.create_gate("n_binary check", |meta| {
+            // col_y  | col_x | col_n  | col_n_acc  | const_2_power_col           |selector | instance
+            //        |       | n_prev | n_acc_prev | 2 ^ i == const_2_power_prev |         | n as u64
+            //        |       |        | n_acc_cur
+            let s = meta.query_selector(selector);
 
-                let n_prev = meta.query_advice(col_n, Rotation::prev());
-                let const_2_power_prev = meta.query_fixed(const_2_power_col, Rotation::prev());
+            let n_prev = meta.query_advice(col_n, Rotation::prev());
+            let const_2_power_prev = meta.query_fixed(const_2_power_col, Rotation::prev());
 
-                let n_acc_prev = meta.query_advice(col_n_acc, Rotation::prev());
-                let n_acc_cur = meta.query_advice(col_n_acc, Rotation::cur());
-                vec![
-                    s * (n_acc_cur.clone() - (n_acc_prev.clone() + n_prev.clone() * const_2_power_prev))
-                ]
-            },
-        );
+            let n_acc_prev = meta.query_advice(col_n_acc, Rotation::prev());
+            let n_acc_cur = meta.query_advice(col_n_acc, Rotation::cur());
+            vec![
+                s * (n_acc_cur.clone()
+                    - (n_acc_prev.clone() + n_prev.clone() * const_2_power_prev)),
+            ]
+        });
 
         ExponentiationConfig {
             col_y,
@@ -189,8 +182,6 @@ impl<F: FieldExt> ExponentiationChip<F> {
                     const_2_power_vec.push(const_2_power_cell.clone());
                 }
 
-                
-
                 // calculate intermediate values of y up to the final value
                 for i in 1..len {
                     let one_minus_n = n_binary_vec[i - 1].value().map(|n| {
@@ -209,15 +200,17 @@ impl<F: FieldExt> ExponentiationChip<F> {
                         },
                     )?;
 
-
-
                     if i < len - 1 {
                         self.config.selector.enable(&mut region, i)?;
                     }
                 }
 
-                let mut n_acc_cell =
-                    region.assign_advice_from_constant(|| "n_acc", self.config.col_n_acc, 0, F::zero())?;
+                let mut n_acc_cell = region.assign_advice_from_constant(
+                    || "n_acc",
+                    self.config.col_n_acc,
+                    0,
+                    F::zero(),
+                )?;
 
                 // calculate intermediate values of n_acc up to the final value
                 for i in 1..len {
@@ -225,7 +218,11 @@ impl<F: FieldExt> ExponentiationChip<F> {
                         || "n_acc",
                         self.config.col_n_acc,
                         i,
-                        || n_acc_cell.value().copied() + n_binary_vec[i - 1].value().copied() * const_2_power_vec[i - 1].value().copied(),
+                        || {
+                            n_acc_cell.value().copied()
+                                + n_binary_vec[i - 1].value().copied()
+                                    * const_2_power_vec[i - 1].value().copied()
+                        },
                     )?;
 
                     if i < len - 1 {
