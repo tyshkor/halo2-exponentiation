@@ -178,6 +178,19 @@ impl<F: FieldExt> ExponentiationChip<F> {
 
                 let mut const_2_power_vec = Vec::with_capacity(len);
 
+                // populate column for 2 powers of n: 2 ^ i
+                for i in 0..(len + 1) {
+                    let const_2_power_cell = region.assign_fixed(
+                        || "const_2_power",
+                        self.config.const_2_power_col,
+                        i,
+                        || Value::known(F::from_u128(2_u128.pow(i as u32))),
+                    )?;
+                    const_2_power_vec.push(const_2_power_cell.clone());
+                }
+
+                
+
                 // calculate intermediate values of y up to the final value
                 for i in 1..len {
                     let one_minus_n = n_binary_vec[i - 1].value().map(|n| {
