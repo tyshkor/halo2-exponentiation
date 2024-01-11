@@ -17,11 +17,12 @@ fn exp_example1() {
 
     let mut n_bits: Vec<_> = u64_to_bits_rev(n, N);
 
-    let circuit = MyCircuit::<Fp, 8>(PhantomData);
+    let circuit = MyCircuit::<Fp, N>(PhantomData);
 
     let mut public_input = vec![x, result];
 
     public_input.append(&mut n_bits);
+    public_input.push(Fp::from(n));
 
     let prover = MockProver::run(k, &circuit, vec![public_input.clone()]).unwrap();
     prover.assert_satisfied();
@@ -40,11 +41,12 @@ fn exp_example1_fail() {
 
     let mut n_bits: Vec<_> = u64_to_bits_rev(n, N);
 
-    let circuit = MyCircuit::<Fp, 8>(PhantomData);
+    let circuit = MyCircuit::<Fp, N>(PhantomData);
 
     let mut public_input = vec![x, result];
 
     public_input.append(&mut n_bits);
+    public_input.push(Fp::from(n));
 
     let prover = MockProver::run(k, &circuit, vec![public_input.clone()]).unwrap();
     prover.assert_satisfied();
@@ -62,11 +64,12 @@ fn exp_example2() {
 
     let mut n_bits: Vec<_> = u64_to_bits_rev(n, N);
 
-    let circuit = MyCircuit::<Fp, 8>(PhantomData);
+    let circuit = MyCircuit::<Fp, N>(PhantomData);
 
     let mut public_input = vec![x, result];
 
     public_input.append(&mut n_bits);
+    public_input.push(Fp::from(n));
 
     let prover = MockProver::run(k, &circuit, vec![public_input.clone()]).unwrap();
     prover.assert_satisfied();
@@ -85,11 +88,12 @@ fn exp_example2_fail() {
 
     let mut n_bits: Vec<_> = u64_to_bits_rev(n, N);
 
-    let circuit = MyCircuit::<Fp, 8>(PhantomData);
+    let circuit = MyCircuit::<Fp, N>(PhantomData);
 
     let mut public_input = vec![x, result];
 
     public_input.append(&mut n_bits);
+    public_input.push(Fp::from(n));
 
     let prover = MockProver::run(k, &circuit, vec![public_input.clone()]).unwrap();
     prover.assert_satisfied();
@@ -107,11 +111,12 @@ fn exp_example3() {
 
     let mut n_bits: Vec<_> = u64_to_bits_rev(n, N);
 
-    let circuit = MyCircuit::<Fp, 8>(PhantomData);
+    let circuit = MyCircuit::<Fp, N>(PhantomData);
 
     let mut public_input = vec![x, result];
 
     public_input.append(&mut n_bits);
+    public_input.push(Fp::from(n));
 
     let prover = MockProver::run(k, &circuit, vec![public_input.clone()]).unwrap();
     prover.assert_satisfied();
@@ -130,11 +135,12 @@ fn exp_example3_fail() {
 
     let mut n_bits: Vec<_> = u64_to_bits_rev(n, N);
 
-    let circuit = MyCircuit::<Fp, 8>(PhantomData);
+    let circuit = MyCircuit::<Fp, N>(PhantomData);
 
     let mut public_input = vec![x, result];
 
     public_input.append(&mut n_bits);
+    public_input.push(Fp::from(n));
 
     let prover = MockProver::run(k, &circuit, vec![public_input.clone()]).unwrap();
     prover.assert_satisfied();
@@ -152,11 +158,12 @@ fn exp_example4() {
 
     let mut n_bits: Vec<_> = u64_to_bits_rev(n, N);
 
-    let circuit = MyCircuit::<Fp, 8>(PhantomData);
+    let circuit = MyCircuit::<Fp, N>(PhantomData);
 
     let mut public_input = vec![x, result];
 
     public_input.append(&mut n_bits);
+    public_input.push(Fp::from(n));
 
     let prover = MockProver::run(k, &circuit, vec![public_input.clone()]).unwrap();
     prover.assert_satisfied();
@@ -175,11 +182,12 @@ fn exp_example4_fail() {
 
     let mut n_bits: Vec<_> = u64_to_bits_rev(n, N);
 
-    let circuit = MyCircuit::<Fp, 8>(PhantomData);
+    let circuit = MyCircuit::<Fp, N>(PhantomData);
 
     let mut public_input = vec![x, result];
 
     public_input.append(&mut n_bits);
+    public_input.push(Fp::from(n));
 
     let prover = MockProver::run(k, &circuit, vec![public_input.clone()]).unwrap();
     prover.assert_satisfied();
@@ -197,11 +205,12 @@ fn exp_example5() {
 
     let mut n_bits: Vec<_> = u64_to_bits_rev(n, N);
 
-    let circuit = MyCircuit::<Fp, 8>(PhantomData);
+    let circuit = MyCircuit::<Fp, N>(PhantomData);
 
     let mut public_input = vec![x, result];
 
     public_input.append(&mut n_bits);
+    public_input.push(Fp::from(n));
 
     let prover = MockProver::run(k, &circuit, vec![public_input.clone()]).unwrap();
     prover.assert_satisfied();
@@ -220,11 +229,12 @@ fn exp_example5_fail() {
 
     let mut n_bits: Vec<_> = u64_to_bits_rev(n, N);
 
-    let circuit = MyCircuit::<Fp, 8>(PhantomData);
+    let circuit = MyCircuit::<Fp, N>(PhantomData);
 
     let mut public_input = vec![x, result];
 
     public_input.append(&mut n_bits);
+    public_input.push(Fp::from(n));
 
     let prover = MockProver::run(k, &circuit, vec![public_input.clone()]).unwrap();
     prover.assert_satisfied();
