@@ -80,6 +80,23 @@ impl<F: FieldExt> ExponentiationChip<F> {
                 ]
             },
         );
+
+        meta.create_gate(
+            "squaring",
+            |meta| {
+                // col_y  | col_x      | col_n  | col_n_acc | const_2_power_col |selector
+                //        | x_prev     |        |           |                   |s
+                //        | x_prev ^ 2 |
+                let s = meta.query_selector(selector);
+
+                let x_prev = meta.query_advice(col_x, Rotation::prev());
+                let x_cur = meta.query_advice(col_x, Rotation::cur());
+                vec![
+                    s * (x_cur.clone() - x_prev.clone() * x_prev)
+                ]
+            },
+        );
+
         ExponentiationConfig {
             col_y,
             col_x,
@@ -141,6 +158,7 @@ impl<F: FieldExt> ExponentiationChip<F> {
                 }
 
                 let mut const_2_power_vec = Vec::with_capacity(len);
+
 
                 // calculate intermediate values of y up to the final value
                 for i in 1..len {
@@ -204,6 +222,8 @@ impl<F: FieldExt, const N: usize> Circuit<F> for MyCircuit<F, N> {
         mut layouter: impl Layouter<F>,
     ) -> Result<(), Error> {
         let chip = ExponentiationChip::construct(config);
+
+        let (cell_y, n_acc_cell) = chip.assign(layouter.namespace(|| "table"), N)?;
 
         // check out with the accumulator instance value, its the last value in the instance column
         chip.expose_public(layouter.namespace(|| "out"), &n_acc_cell, N + 2)?;
