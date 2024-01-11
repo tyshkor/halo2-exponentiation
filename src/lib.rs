@@ -216,6 +216,23 @@ impl<F: FieldExt> ExponentiationChip<F> {
                     }
                 }
 
+                let mut n_acc_cell =
+                    region.assign_advice_from_constant(|| "n_acc", self.config.col_n_acc, 0, F::zero())?;
+
+                // calculate intermediate values of n_acc up to the final value
+                for i in 1..len {
+                    n_acc_cell = region.assign_advice(
+                        || "n_acc",
+                        self.config.col_n_acc,
+                        i,
+                        || n_acc_cell.value().copied() + n_binary_vec[i - 1].value().copied() * const_2_power_vec[i - 1].value().copied(),
+                    )?;
+
+                    if i < len - 1 {
+                        self.config.selector.enable(&mut region, i)?;
+                    }
+                }
+
                 // return final value
                 Ok((y_cell, n_acc_cell))
             },
