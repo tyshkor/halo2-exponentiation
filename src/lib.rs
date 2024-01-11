@@ -8,10 +8,18 @@ mod tests;
 
 #[derive(Debug, Clone)]
 struct ExponentiationConfig {
+    // column for intermediate values of y
     pub col_y: Column<Advice>,
+    // column for powers of base x ^ (2 ^ row)
     pub col_x: Column<Advice>,
+    // column for bitwise representation of `n`
     pub col_n: Column<Advice>,
+    // selector for the only gate
     pub selector: Selector,
+    // instance
+    // base
+    // result
+    // bitwise representation of n in reverse order
     pub instance: Column<Instance>,
 }
 
@@ -45,16 +53,25 @@ impl<F: FieldExt> ExponentiationChip<F> {
 
         meta.enable_constant(const_col);
 
-        meta.create_gate("main", |meta| {
-            let s = meta.query_selector(selector);
+        meta.create_gate(
+            "if n_prev == 1 {y_cur * x_prev} else {y_curcargo test}",
+            |meta| {
+                // col_y  | col_x  | col_n  |selector
+                // y_prev | x_prev | n_prev |   s
+                // y_cur  |
+                let s = meta.query_selector(selector);
 
-            let y_prev = meta.query_advice(col_y, Rotation::prev());
-            let y_cur = meta.query_advice(col_y, Rotation::cur());
+                let y_prev = meta.query_advice(col_y, Rotation::prev());
+                let y_cur = meta.query_advice(col_y, Rotation::cur());
 
-            let x_prev = meta.query_advice(col_x, Rotation::prev());
-            let n_prev = meta.query_advice(col_n, Rotation::prev());
-            vec![s * (n_prev.clone() * (y_cur.clone() - y_prev.clone() * x_prev) + (Expression::Constant(F::one()) - n_prev) * (y_cur - y_prev))]
-        });
+                let x_prev = meta.query_advice(col_x, Rotation::prev());
+                let n_prev = meta.query_advice(col_n, Rotation::prev());
+                vec![
+                    s * (n_prev.clone() * (y_cur.clone() - y_prev.clone() * x_prev)
+                        + (Expression::Constant(F::one()) - n_prev) * (y_cur - y_prev)),
+                ]
+            },
+        );
 
         ExponentiationConfig {
             col_y,
@@ -70,12 +87,7 @@ impl<F: FieldExt> ExponentiationChip<F> {
         &self,
         mut layouter: impl Layouter<F>,
         len: usize,
-    ) -> Result<
-        
-            AssignedCell<F, F>
-        ,
-        Error,
-    > {
+    ) -> Result<AssignedCell<F, F>, Error> {
         layouter.assign_region(
             || "table",
             |mut region| {
@@ -94,6 +106,7 @@ impl<F: FieldExt> ExponentiationChip<F> {
 
                 x_power_vec.push(x_cell.clone());
 
+                // populate column for powers of x: x ^ (2 ^ i)
                 for i in 1..len {
                     x_cell = region.assign_advice(
                         || "x",
@@ -106,6 +119,7 @@ impl<F: FieldExt> ExponentiationChip<F> {
 
                 let mut n_binary_vec = Vec::with_capacity(len);
 
+                // populate column for bitwise representation of n
                 for i in 0..len {
                     let cell = region.assign_advice_from_instance(
                         || "n_binary",
@@ -117,8 +131,8 @@ impl<F: FieldExt> ExponentiationChip<F> {
                     n_binary_vec.push(cell.clone());
                 }
 
+                // calculate intermediate values of y up to the final value
                 for i in 1..len {
-
                     let one_minus_n = n_binary_vec[i - 1].value().map(|n| {
                         let n_val = n.get_lower_32() as u64;
                         F::from(1 - n_val)
@@ -128,18 +142,19 @@ impl<F: FieldExt> ExponentiationChip<F> {
                         || "y",
                         self.config.col_y,
                         i,
-                        || n_binary_vec[i - 1].value().copied()
+                        || {
+                            n_binary_vec[i - 1].value().copied()
                                 * (y_cell.value().copied() * x_power_vec[i - 1].value())
-                                + one_minus_n * y_cell.value().copied(),
+                                + one_minus_n * y_cell.value().copied()
+                        },
                     )?;
 
-                    
                     if i < len - 1 {
                         self.config.selector.enable(&mut region, i)?;
                     }
-
                 }
 
+                // return final value
                 Ok(y_cell)
             },
         )
@@ -177,8 +192,9 @@ impl<F: FieldExt, const N: usize> Circuit<F> for MyCircuit<F, N> {
     ) -> Result<(), Error> {
         let chip = ExponentiationChip::construct(config);
 
-        let cell_y = chip.assign(layouter.namespace(|| "first row"), N)?;
+        let cell_y = chip.assign(layouter.namespace(|| "table"), N)?;
 
+        // check out with the result instance value
         chip.expose_public(layouter.namespace(|| "out"), &cell_y, 1)?;
 
         Ok(())
