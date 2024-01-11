@@ -14,12 +14,17 @@ struct ExponentiationConfig {
     pub col_x: Column<Advice>,
     // column for bitwise representation of `n`
     pub col_n: Column<Advice>,
+    // column for bitwise representation of `n` accumulator
+    pub col_n_acc: Column<Advice>,
+    // column for fixed powers of 2
+    pub const_2_power_col: Column<Fixed>,
     // selector for the only gate
     pub selector: Selector,
     // instance
     // base
     // result
     // bitwise representation of n in reverse order
+    // n value itself
     pub instance: Column<Instance>,
 }
 
@@ -41,6 +46,7 @@ impl<F: FieldExt> ExponentiationChip<F> {
         let col_y = meta.advice_column();
         let col_x = meta.advice_column();
         let col_n = meta.advice_column();
+        let col_n_acc = meta.advice_column();
         let selector = meta.selector();
         let instance = meta.instance_column();
         meta.enable_equality(instance);
@@ -48,16 +54,19 @@ impl<F: FieldExt> ExponentiationChip<F> {
         meta.enable_equality(col_y);
         meta.enable_equality(col_x);
         meta.enable_equality(col_n);
+        meta.enable_equality(col_n_acc);
 
         let const_col = meta.fixed_column();
+        let const_2_power_col = meta.fixed_column();
 
         meta.enable_constant(const_col);
+        meta.enable_constant(const_2_power_col);
 
         meta.create_gate(
             "if n_prev == 1 {y_cur * x_prev} else {y_curcargo test}",
             |meta| {
-                // col_y  | col_x  | col_n  |selector
-                // y_prev | x_prev | n_prev |   s
+                // col_y  | col_x  | col_n  | col_n_acc | const_2_power_col |selector
+                // y_prev | x_prev | n_prev |           |                   |s
                 // y_cur  |
                 let s = meta.query_selector(selector);
 
@@ -73,12 +82,42 @@ impl<F: FieldExt> ExponentiationChip<F> {
             },
         );
 
+        meta.create_gate("squaring", |meta| {
+            // col_y  | col_x      | col_n  | col_n_acc | const_2_power_col |selector
+            //        | x_prev     |        |           |                   |s
+            //        | x_prev ^ 2 |
+            let s = meta.query_selector(selector);
+
+            let x_prev = meta.query_advice(col_x, Rotation::prev());
+            let x_cur = meta.query_advice(col_x, Rotation::cur());
+            vec![s * (x_cur.clone() - x_prev.clone() * x_prev)]
+        });
+
+        meta.create_gate("n_binary check", |meta| {
+            // col_y  | col_x | col_n  | col_n_acc  | const_2_power_col           |selector | instance
+            //        |       | n_prev | n_acc_prev | 2 ^ i == const_2_power_prev |         | n as u64
+            //        |       |        | n_acc_cur
+            let s = meta.query_selector(selector);
+
+            let n_prev = meta.query_advice(col_n, Rotation::prev());
+            let const_2_power_prev = meta.query_fixed(const_2_power_col, Rotation::prev());
+
+            let n_acc_prev = meta.query_advice(col_n_acc, Rotation::prev());
+            let n_acc_cur = meta.query_advice(col_n_acc, Rotation::cur());
+            vec![
+                s * (n_acc_cur.clone()
+                    - (n_acc_prev.clone() + n_prev.clone() * const_2_power_prev)),
+            ]
+        });
+
         ExponentiationConfig {
             col_y,
             col_x,
             col_n,
+            col_n_acc,
             selector,
             instance,
+            const_2_power_col,
         }
     }
 
@@ -87,7 +126,7 @@ impl<F: FieldExt> ExponentiationChip<F> {
         &self,
         mut layouter: impl Layouter<F>,
         len: usize,
-    ) -> Result<AssignedCell<F, F>, Error> {
+    ) -> Result<(AssignedCell<F, F>, AssignedCell<F, F>), Error> {
         layouter.assign_region(
             || "table",
             |mut region| {
@@ -131,6 +170,19 @@ impl<F: FieldExt> ExponentiationChip<F> {
                     n_binary_vec.push(cell.clone());
                 }
 
+                let mut const_2_power_vec = Vec::with_capacity(len);
+
+                // populate column for 2 powers of n: 2 ^ i
+                for i in 0..(len + 1) {
+                    let const_2_power_cell = region.assign_fixed(
+                        || "const_2_power",
+                        self.config.const_2_power_col,
+                        i,
+                        || Value::known(F::from_u128(2_u128.pow(i as u32))),
+                    )?;
+                    const_2_power_vec.push(const_2_power_cell.clone());
+                }
+
                 // calculate intermediate values of y up to the final value
                 for i in 1..len {
                     let one_minus_n = n_binary_vec[i - 1].value().map(|n| {
@@ -154,8 +206,33 @@ impl<F: FieldExt> ExponentiationChip<F> {
                     }
                 }
 
+                let mut n_acc_cell = region.assign_advice_from_constant(
+                    || "n_acc",
+                    self.config.col_n_acc,
+                    0,
+                    F::zero(),
+                )?;
+
+                // calculate intermediate values of n_acc up to the final value
+                for i in 1..len {
+                    n_acc_cell = region.assign_advice(
+                        || "n_acc",
+                        self.config.col_n_acc,
+                        i,
+                        || {
+                            n_acc_cell.value().copied()
+                                + n_binary_vec[i - 1].value().copied()
+                                    * const_2_power_vec[i - 1].value().copied()
+                        },
+                    )?;
+
+                    if i < len - 1 {
+                        self.config.selector.enable(&mut region, i)?;
+                    }
+                }
+
                 // return final value
-                Ok(y_cell)
+                Ok((y_cell, n_acc_cell))
             },
         )
     }
@@ -192,7 +269,10 @@ impl<F: FieldExt, const N: usize> Circuit<F> for MyCircuit<F, N> {
     ) -> Result<(), Error> {
         let chip = ExponentiationChip::construct(config);
 
-        let cell_y = chip.assign(layouter.namespace(|| "table"), N)?;
+        let (cell_y, n_acc_cell) = chip.assign(layouter.namespace(|| "table"), N)?;
+
+        // check out with the accumulator instance value, its the last value in the instance column
+        chip.expose_public(layouter.namespace(|| "out"), &n_acc_cell, N + 2)?;
 
         // check out with the result instance value
         chip.expose_public(layouter.namespace(|| "out"), &cell_y, 1)?;
