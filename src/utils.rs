@@ -1,5 +1,7 @@
 use halo2_proofs::pasta::Fp;
 
+// bitwise representation of n in reverse order
+#[allow(dead_code)]
 pub fn u64_to_bits_rev(input: u64, len: usize) -> Vec<Fp> {
     let mut result = Vec::new();
     
